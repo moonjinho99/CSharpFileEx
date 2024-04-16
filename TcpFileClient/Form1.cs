@@ -19,6 +19,7 @@ namespace TcpFileClient
         string m_fName = string.Empty;
         string[] m_split = null;
         private const int ChunkSize = 1024; // 작은 데이터 조각의 크기
+        byte[] m_clientData = null;
 
         enum DataPacketType { TEXT = 1, IMAGE };
 
@@ -95,8 +96,13 @@ namespace TcpFileClient
             using (Socket clientSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp))
             {
                
-                byte[] textData = Encoding.UTF8.GetBytes(textBox2.Text);
+                byte[] textData = Encoding.UTF8.GetBytes(textBox2.Text+"\r\n");
                 byte[] fileType = BitConverter.GetBytes((int)DataPacketType.TEXT);
+
+                m_clientData = new byte[fileType.Length + textData.Length];
+
+                fileType.CopyTo(m_clientData, 0);
+                textData.CopyTo(m_clientData, 4);
 
                 // 서버의 IP 주소와 포트 번호
                 IPEndPoint serverEP = new IPEndPoint(IPAddress.Parse("192.168.56.1"), 9050);
@@ -105,11 +111,13 @@ namespace TcpFileClient
                 clientSocket.SendTo(BitConverter.GetBytes((int)DataPacketType.TEXT), serverEP);
 
                 // 텍스트 데이터 전송
-                clientSocket.SendTo(textData, serverEP);
+                clientSocket.SendTo(m_clientData, serverEP);
 
                 // 텍스트 전송 완료 메시지 전송
                 clientSocket.SendTo(BitConverter.GetBytes((int)DataPacketType.TEXT), serverEP);
-            }
+
+                clientSocket.Close();
+             }
         }
     }
 }

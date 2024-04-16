@@ -72,12 +72,14 @@ namespace TcpFileExServer
         {
             int fileNameLen = 0;
             StateObject state = ar.AsyncState as StateObject;
-            EndPoint remoteEP = new IPEndPoint(IPAddress.Any, 0);
+            EndPoint remoteEP = new IPEndPoint(IPAddress.Any, 9050);
 
             try
             {
                 int bytesRead = state.workSocket.EndReceiveFrom(ar, ref remoteEP);
 
+
+                Console.WriteLine("바이트수 : " + bytesRead);
                 if (bytesRead > 0)
                 {
                     if (initialFlag)
@@ -101,9 +103,17 @@ namespace TcpFileExServer
                         }
                         else if (dataType == (int)DataPacketType.TEXT)
                         {
-                            Console.WriteLine("바이트수 : " + bytesRead);
                             textData = Encoding.UTF8.GetString(buffer, 4, bytesRead - 4);
+                            int markerIndex = textData.IndexOf("\r\n");
+                            if (markerIndex != -1)
+                            {
+                                textData = textData.Substring(0, markerIndex); // 마커 이후의 데이터는 제거
+                                textBox1.Text = textData;
+                            }
+                            Console.WriteLine("텍스트 데이터 : " + textData);
+
                             state.workSocket.BeginReceiveFrom(state.buffer, 0, StateObject.BufferSize, 0, ref remoteEP, new AsyncCallback(ReadCallback), state);
+             
                         }
                     }
 
@@ -122,6 +132,7 @@ namespace TcpFileExServer
                 }
                 else
                 {
+                    Console.WriteLine("출력메소드");
                     if (dataType == (int)DataPacketType.IMAGE)
                     {
                         pictureBox1.SizeMode = PictureBoxSizeMode.StretchImage;
@@ -134,7 +145,6 @@ namespace TcpFileExServer
                     else if (dataType == (int)DataPacketType.TEXT)
                         Invoke((MethodInvoker)delegate
                         {
-                            Console.WriteLine("출력");
                             textBox1.Text = textData;
                         });
                 }
